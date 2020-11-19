@@ -13,9 +13,6 @@
 prj.dir <- getwd()
 
 #---Log output  
-con <- file(here::here('log', paste0("console_", timestamp(), ".log")))
-sink(con, split=T, append=F)
-
 cat('load project specifics....', '\n')
   cat(paste0('Project working directory:', prj.dir), '\n')
   source( list.files(pattern='*_specs.R'))

@@ -13,5 +13,5 @@ dta.names <- list(
                'cdc_rsv.Rds'),
   f_analysis =c('cdc_labres.Rds',
                 'SLFlu_simfile.Rds'),
-  f_cpt_list = c('SLFlu_benchmks.Rds')
+  f_cpt_list = c('SLFlu_cv.Rds')
 )

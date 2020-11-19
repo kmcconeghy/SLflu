@@ -44,6 +44,28 @@ simfile <- left_join(d_lab, d_dths, by=c('season', 'week')) %>%
 simfile_2 <- simfile %>%
   select(-prp_ah1, -prp_aunk, -starts_with('prp_who')) %>%
   na.omit(.) %>%
-  select(season, year, week, starts_with('prp'), starts_with('outc'))
+  group_by(season) %>%
+  mutate(week_2 = row_number()) %>%
+  ungroup %>%
+  dplyr::filter(season != '2018-19') %>%
+  dplyr::filter(week_2 !=53) %>%
+  select(-week) %>%
+  rename(`week` = week_2) %>%
+  select(season, year, `week`, starts_with('prp'), starts_with('outc')) %>%
+  group_by(season) %>%
+  mutate(across(starts_with('prp_'),
+                .fns = list(lag_2 = ~lag(., 2)),
+                .names = "{col}_{fn}")) %>%
+  mutate(across(ends_with('lag_2'),
+                .fns = list(lag_2 = ~lag(., 2)),
+                .names = "{col}_{fn}")) %>%
+  mutate(week_2 = poly(week, 2),
+         week_3 = poly(week, 3),
+         week_4 = poly(week, 4),
+         frer_yr_sin = sinpi(2 * week / 52), 
+         frer_yr_cos = cospi(2 * week / 52),
+         frer_semiyr_sin = sinpi(2 * week / 26),
+         frer_semiyr_sin = cospi(2 * week / 26)) %>%
+  ungroup
   
 saveRDS(simfile_2, here::here('prj_dbdf', dta.names$f_analysis[2]))
