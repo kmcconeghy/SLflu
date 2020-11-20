@@ -12,12 +12,12 @@
 
 #-- Analysis  
   if (T) source(here::here('src', paste0(prj.specs$prj.prefix, '_05_cpt_CV.R')))
-  if (T) source(here::here('src', paste0(prj.specs$prj.prefix, '_05_cpt_SL.lmf.R')))
-  if (T) source(here::here('src', paste0(prj.specs$prj.prefix, '_05_cpt_SL.lmpoly.R')))
-  if (F) source(here::here('src', paste0(prj.specs$prj.prefix, '_05_cpt_SL.lasso.R')))
-  if (F) source(here::here('src', paste0(prj.specs$prj.prefix, '_05_cpt_SL.elasticnet.R')))
-  if (F) source(here::here('src', paste0(prj.specs$prj.prefix, '_05_cpt_SL.rf.R')))
-  if (F) source(here::here('src', paste0(prj.specs$prj.prefix, '_05_cpt_SL.gam.R')))
+  if (T) source(here::here('src', paste0(prj.specs$prj.prefix, '_06a_cpt_SL.lm.R')))
+  if (T) source(here::here('src', paste0(prj.specs$prj.prefix, '_06b_cpt_SL.penal.R')))
+  if (T) source(here::here('src', paste0(prj.specs$prj.prefix, '_06c_cpt_SL.rf.R')))
+  if (F) source(here::here('src', paste0(prj.specs$prj.prefix, '_06d_cpt_SL.gam.R')))
+  if (F) source(here::here('src', paste0(prj.specs$prj.prefix, '_07_bld_preds.R')))
+  if (F) source(here::here('src', paste0(prj.specs$prj.prefix, '_08_cpt_SL.R')))
   
   #-- Randomizations  
   if (T) source(here::here('src', paste0(prj.specs$prj.prefix, '_bld_01_dorandom.R')))

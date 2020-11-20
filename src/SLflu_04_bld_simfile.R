@@ -43,7 +43,6 @@ simfile <- left_join(d_lab, d_dths, by=c('season', 'week')) %>%
   
 simfile_2 <- simfile %>%
   select(-prp_ah1, -prp_aunk, -starts_with('prp_who')) %>%
-  na.omit(.) %>%
   group_by(season) %>%
   mutate(week_2 = row_number()) %>%
   ungroup %>%
@@ -59,13 +58,14 @@ simfile_2 <- simfile %>%
   mutate(across(ends_with('lag_2'),
                 .fns = list(lag_2 = ~lag(., 2)),
                 .names = "{col}_{fn}")) %>%
-  mutate(week_2 = poly(week, 2),
-         week_3 = poly(week, 3),
-         week_4 = poly(week, 4),
+  mutate(week_2 = week^2,
+         week_3 = week^3,
+         week_4 = week^4,
          frer_yr_sin = sinpi(2 * week / 52), 
          frer_yr_cos = cospi(2 * week / 52),
          frer_semiyr_sin = sinpi(2 * week / 26),
          frer_semiyr_sin = cospi(2 * week / 26)) %>%
-  ungroup
+  ungroup %>%
+  na.omit(.)
   
 saveRDS(simfile_2, here::here('prj_dbdf', dta.names$f_analysis[2]))

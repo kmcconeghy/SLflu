@@ -26,5 +26,5 @@ d_test <- bind_rows(test_1, test_2, test_3, test_4, test_5, .id='set') %>%
 
 d_cv <- inner_join(d_train, d_test, by='set')
 
-d_cv <- saveRDS(here::here('prj_dbdf', dta.names$f_cpt_list[1])) 
+saveRDS(d_cv, here::here('prj_dbdf', dta.names$f_cpt[1])) 
 
