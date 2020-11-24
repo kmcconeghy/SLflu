@@ -58,13 +58,20 @@ simfile_2 <- simfile %>%
   mutate(across(ends_with('lag_2'),
                 .fns = list(lag_2 = ~lag(., 2)),
                 .names = "{col}_{fn}")) %>%
+  na.omit(.) %>%
+  group_by(season) %>%
+  mutate(week = row_number()) %>%
+  ungroup %>%
   mutate(week_2 = week^2,
          week_3 = week^3,
          week_4 = week^4,
          frer_yr_sin = sinpi(2 * week / 52), 
          frer_yr_cos = cospi(2 * week / 52),
          frer_semiyr_sin = sinpi(2 * week / 26),
-         frer_semiyr_sin = cospi(2 * week / 26)) %>%
+         frer_semiyr_sin = cospi(2 * week / 26),
+         y = scale(outc_dth_tot, center=T),
+         y_var = sd(outc_dth_tot - mean(outc_dth_tot)),
+         y_2 = (y*y_var) + mean(outc_dth_tot)) %>%
   ungroup %>%
   na.omit(.)
   

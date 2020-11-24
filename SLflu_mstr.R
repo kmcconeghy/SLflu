@@ -15,11 +15,11 @@
   if (T) source(here::here('src', paste0(prj.specs$prj.prefix, '_06a_cpt_SL.lm.R')))
   if (T) source(here::here('src', paste0(prj.specs$prj.prefix, '_06b_cpt_SL.penal.R')))
   if (T) source(here::here('src', paste0(prj.specs$prj.prefix, '_06c_cpt_SL.rf.R')))
-  if (F) source(here::here('src', paste0(prj.specs$prj.prefix, '_06d_cpt_SL.gam.R')))
-  if (F) source(here::here('src', paste0(prj.specs$prj.prefix, '_07_bld_preds.R')))
-  if (F) source(here::here('src', paste0(prj.specs$prj.prefix, '_08_cpt_SL.R')))
-  
-  #-- Randomizations  
+  if (T) source(here::here('src', paste0(prj.specs$prj.prefix, '_06d_cpt_SL.gam.R')))
+  if (T) source(here::here('src', paste0(prj.specs$prj.prefix, '_07_cpt_SL.R')))
+  if (F) source(here::here('src', paste0(prj.specs$prj.prefix, '_08_bld_preds.R')))
+
+#-- Report
   if (T) source(here::here('src', paste0(prj.specs$prj.prefix, '_bld_01_dorandom.R')))
   
 

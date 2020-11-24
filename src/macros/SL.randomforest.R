@@ -1,4 +1,4 @@
-SL.randomforest <- function(train, test) {
+SL.randomforest <- function(train, test, ...) {
   X_trn_df <- train %>%
     select(-year, -season, -starts_with('outc_'), outc_dth_tot)
   
@@ -11,6 +11,7 @@ SL.randomforest <- function(train, test) {
     outc_dth_tot ~ .,
     data=X_trn_df,
     ntree=2000,
+    ...
   )
   
   y_pred <- predict(fit, newdata = X_tst_df, type = "response")
