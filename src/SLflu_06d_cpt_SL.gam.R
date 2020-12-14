@@ -1,5 +1,5 @@
 
-library(mgcv)
+library(gamsel)
 
 d_cv <- readRDS(here::here('prj_dbdf', dta.names$f_cpt[1])) 
 

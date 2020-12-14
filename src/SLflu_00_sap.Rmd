@@ -1,0 +1,93 @@
+---
+title: "SuperLearner to improve estimates of influenza-related morbidity and mortality"
+author: "Kevin W. McConeghy, Jason Gantenberg, Andrew Zullo, Rob Van Aalst"
+date: "Compiled: `r Sys.Date()`"
+output: 
+  pdf_document:
+    toc: true
+    toc_depth: 2
+bibliography: 'C:\\Github\\hsrrefs.bib'
+link-citations: yes
+params:
+  code_nm: 
+    value: '00_sap'
+  src_cfg: 
+    value: 'SLflu_cfg.R'
+always_allow_html: yes
+---
+
+```{r setup, include=FALSE}
+if (Sys.getenv("USERNAME")=='kevin') { 
+  source(paste0('C:\\Users\\kevin\\Documents\\PHP2602\\', params$src_cfg))  
+}
+if (Sys.getenv("USERNAME")=='kmcconeg') { 
+  source(paste0('C:\\Github\\SLflu\\', params$src_cfg))  
+}
+
+library(knitr)
+library(kableExtra)
+opts_chunk$set(echo=F) 
+seed_day <- as.integer(ymd('2020-09-05'))
+set.seed(seed_day)
+```
+
+# Introduction  
+
+ * Overall goal: accurately quantify morbidity and mortality attributable to influenza   
+ * It is accepted diagnosed cases represent a underestimate of influenza impact  
+ 
+ * Mathematical modeling is used to estimate the overtly measured impact of disease  
+ 
+ * The original methods for identifying attributable disease are dated  
+ 
+ * We proposed testing the conventional methods to new machine learning approaches including ensemble learning methods.  
+ 
+# Objective  
+
+ * We aim to estimate the forecasting accuracy of different model approaches compared to each other and an ensemble SuperLearner for estimating the number of deaths due to any cause in an influenza season  
+ 
+# Methods  
+
+ * Deaths, ILI activity, viral activity obtained from public CDC data.  
+ * Include following seasons:  
+ ** 
+ 
+## Prediction Target  
+
+ * Weekly number of deaths due to any cause, summarized as:    
+ ** Peak week  
+ ** Peak height (number of deaths in worst week)  
+ ** Cumulative deaths (Total number across entire season)  
+ 
+### Observed targets  
+```{r }
+d_anls <- readRDS(here::here('prj_dbdf', dta.names$f_analysis[2])) 
+```
+
+```{r }
+d_anls %>%
+  group_by(season) %>%
+  summarize(`Peak Week` = which.max(y_2),
+            `Peak Height` = max(y_2),
+            `Cumulative` = sum(y_2)) %>%
+  kable() %>%
+  kable_styling()
+```
+
+## Approach  
+
+ * Generate set of datasets for a leave-one-out cross validation where 'one' is a influenza season.  
+ 
+ * Apply a series of models to the datasets, generating predictions for the excluded dataset as the test case
+ 
+ * The SuperLearner will focus on minimizing the mean squared error, or L-2 squared error loss function  
+ 
+# Research Questions  
+
+## Weights for SL  
+
+These are generated from a NN-LS model with no intercept. It occurs to me, doesn't that assume all observations are i.i.d., and therefore provides equal weights across a set of longutidinal values. So for example, if one learner performs better in early periods, but worse in later periods we effectively get a weight for average performance. 
+
+## How are we doing model selection in GAM?  
+
+I set up gamsel package which is basically glmnet for gams.  

@@ -3,10 +3,10 @@ SL.penal <- function(train, test, alpha) {
   y_tst <- test['outc_dth_tot'] %>% unlist()
   
   X_trn_df <- train %>%
-    select(-year, -season, -starts_with('outc_'), outc_dth_tot)
+    select(-year, -season, -starts_with('outc_'), -starts_with('y'), outc_dth_tot)
   
   X_tst_df <- test %>%
-    select(-year, -season, -starts_with('outc_'), outc_dth_tot)
+    select(-year, -season, -starts_with('outc_'), -starts_with('y'), outc_dth_tot)
   
   X_mat <- model.matrix(outc_dth_tot ~ ., data=X_trn_df) %>% .[, -1]
   
