@@ -41,6 +41,8 @@ set.seed(seed_day)
 # Dataset  
 
 ```{r input}
+d_anls <- readRDS(here::here('prj_dbdf', dta.names$f_analysis[2])) 
+
 df_preds <- readRDS(here('prj_dbdf', dta.names$f_cpt[4]))
 df_mse <- readRDS(here('prj_dbdf', dta.names$f_cpt[5]))
 
@@ -49,26 +51,87 @@ des_df(df_preds, 'Predictions')
 
 # Model Performance  
 ```{r }
-d_anls <- readRDS(here::here('prj_dbdf', dta.names$f_analysis[2])) 
+d_perform <- df_preds %>%
+  select(y_mse, starts_with('mse'), -starts_with('SL')) %>%
+  mutate(week = rep(1:48, 5),
+         season = d_anls$season)
 ```
 
+Assessments from LOO-CV model:  
+
+## Peak week  
+
 ```{r }
-d_anls %>%
+d_perform %>%
   group_by(season) %>%
-  summarize(`Peak Week` = which.max(y_2),
-            `Peak Height` = max(y_2),
-            `Cumulative` = sum(y_2)) %>%
+  summarize_at(vars(y_mse, starts_with('mse')), which.max) %>%
+  pivot_longer(cols = c('y_mse', starts_with('mse')), names_to = 'Model', 
+               values_to = c('Peak Week')) %>%
+  pivot_wider(names_from = season, values_from = 'Peak Week') %>%
   kable() %>%
   kable_styling()
 ```
 
+## Peak week  
+
 ```{r }
+d_perform %>%
+  group_by(season) %>%
+  summarize_at(vars(y_mse, starts_with('mse')), max) %>%
+  pivot_longer(cols = c('y_mse', starts_with('mse')), names_to = 'Model', 
+               values_to = c('Peak cases')) %>%
+  pivot_wider(names_from = season, values_from = 'Peak cases') %>%
+  kable() %>%
+  kable_styling()
+```
 
+## Cumulative cases  
 
+```{r }
+d_perform %>%
+  group_by(season) %>%
+  summarize_at(vars(y_mse, starts_with('mse')), sum) %>%
+  pivot_longer(cols = c('y_mse', starts_with('mse')), names_to = 'Model', 
+               values_to = c('Peak cases')) %>%
+  pivot_wider(names_from = season, values_from = 'Peak cases') %>%
+  kable() %>%
+  kable_styling()
+```
+
+## Mean squared error  
+
+```{r }
+df_mse %>%
+  arrange(mse) %>%
+  mutate(mse = log(mse)) %>%
+  rename(`Log (MSE)` = mse) %>%
+  kable() %>%
+  kable_styling()
+```
+
+ensemble and Top 5 models plotted against data.  
+
+# Figure 1. Predicted vs. Observed data  
+
+```{r }
+top5 <- df_mse %>% arrange(mse) %>% slice(1:5) %>%
+  pull(learner)
+
+d_gg <- d_perform %>%
+  select(season, week, y_mse, all_of(top5)) %>%
+  mutate(sweek = paste0(season, 'W', week),
+         sweek_f = factor(sweek)) %>%
+  pivot_longer(cols = c('y_mse', all_of(top5)),
+               names_to = 'Model', 
+               values_to = 'y') 
+```
+
+```{r }
+ggplot(d_gg, aes(x = sweek_f, y=y, group = Model, color=Model)) +
+  geom_line() + 
+  theme_bw()
 
 ```
 
-
-# 
 
 # References  

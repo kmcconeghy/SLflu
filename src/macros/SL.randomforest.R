@@ -10,7 +10,7 @@ SL.randomforest <- function(train, test, ...) {
   fit <- randomForest(
     outc_dth_tot ~ .,
     data=X_trn_df,
-    ntree=2000,
+    ntree=500,
     ...
   )
   

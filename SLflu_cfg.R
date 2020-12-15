@@ -52,6 +52,8 @@ cat('Sourcing local functions....')
     }
 cat('Done', '\n')
 
+source(here::here('src', paste0(prj.specs$prj.prefix, '_lst_dtafiles.R')))
+
 sessioninfo::session_info()
 
 cat('Project has been loaded according to config file', '\n', '\n')
