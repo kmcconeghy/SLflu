@@ -13,7 +13,7 @@ output:
 bibliography: 'C:\\Github\\hsrrefs.bib'
 link-citations: yes
 params:
-  code_nm: 
+  f_prefix: 
     value: '10_rpt'
   src_cfg: 
     value: 'SLflu_cfg.R'
@@ -38,100 +38,231 @@ seed_day <- as.integer(ymd('2020-12-14'))
 set.seed(seed_day)
 ```
 
-# Dataset  
+# Introduction  
 
+ * Overall goal: accurately quantify morbidity and mortality attributable to influenza   
+ 
+ * It is accepted diagnosed cases represent a underestimate of influenza impact  
+ 
+ * Mathematical modeling is used to estimate the overt impact of disease  
+ 
+ * The original methods for identifying attributable disease are dated  
+ 
+ * We proposed testing the conventional methods against machine learning approaches including ensemble learning  
+ 
+# Objective  
+
+ * We aim to estimate the forecasting accuracy of different model approaches compared to each other and an ensemble SuperLearner for estimating the number of deaths due to any cause in an influenza season  
+ 
+# Data  
+
+ * Deaths, ILI activity, viral activity obtained from public CDC data.  
+ * Include following seasons:  
+ ** 2013/2014, 2014/2015, 2015/2016, 2016/2017, 2017/2018
+ 
+## Prediction Target  
+
+ * Weekly number of deaths due to any cause, summarized as:    
+ ** Peak week  
+ ** Peak height (number of deaths in worst week)  
+ ** Cumulative deaths (Total number across entire season)  
+ 
+### Observed targets  
+```{r }
+d_anls <- readRDS(here::here('prj_dbdf', dta.names$f_analysis[2])) 
+```
+
+```{r }
+d_anls %>%
+  group_by(season) %>%
+  summarize(`Peak Week` = which.max(outc_dth_tot),
+            `Peak Deaths` = max(outc_dth_tot),
+            `Cumulative Deaths` = sum(outc_dth_tot)) %>%
+  mutate(`Peak Deaths` = prettyNum(`Peak Deaths`, big.mark =','),
+         `Cumulative Deaths` = prettyNum(`Cumulative Deaths`, big.mark =',')) %>%
+  kable(align='cccc') %>%
+  kable_classic(full_width = F, html_font = "Cambria")
+```
+
+## Approach  
+
+ * Generate set of datasets for a leave-one-out cross validation where 'one' is a influenza season.  
+ 
+ * Apply a series of models to the datasets, generating predictions for the excluded dataset as the test case
+ 
+ * The SuperLearner will focus on minimizing the mean squared error, or L-2 squared error loss function  
+ ** Learners:
+ *** Cyclical regression with viral terms  
+ *** Polynomial regression with ''  
+ *** Backwards AIC selection for linear model including fourier and polynomial terms, and lagged viral terms  
+ *** Penalized regression: LASSO, Ridge and Elastic Net, lambda selected which minimizes AIC  
+ *** Random forest: Default parameters, Node size 10, 5 variable selection at each node  
+ *** GAM: Includes viral and week terms, each with splines. Penalized spline terms used 
+ 
+ ** Superlearner includes all of above, with predictions generated from each model added to a non-negative least squares model where the outcome was the observed number of events. The coefficients from the model were normalized and used as weights to generate new predictions combining the predictions of each model*model weight.  
+
+*re: weights for superlearner, these are generated from a NN-LS model with no intercept. It occurs to me, doesn't that assume all observations are i.i.d., and therefore provides equal weights across a set of longitudinal values. So for example, what if RF is much better at predicting early part of the curve, but not the middle part?* 
+
+*re: How are we doing model selection in GAM? I set up gamsel package which is basically penalized regression for gams.*
+
+* For each fold:  
+  - Fit learner and generate predictions for season left out  
+  - Regress observed on CV-predictions (level-1 SL)  
+* Take coefficients and weight predictions on full dataset  
+* Compute MSE etc.  
+  
 ```{r input}
 d_anls <- readRDS(here::here('prj_dbdf', dta.names$f_analysis[2])) 
 
 df_preds <- readRDS(here('prj_dbdf', dta.names$f_cpt[4]))
+df_sl <- readRDS(here('prj_dbdf', dta.names$f_cpt[3]))
 df_mse <- readRDS(here('prj_dbdf', dta.names$f_cpt[5]))
-
-des_df(df_preds, 'Predictions')
 ```
 
-# Model Performance  
+# Results  
+
+## Model Performance  
 ```{r }
 d_perform <- df_preds %>%
   select(y_mse, starts_with('mse'), -starts_with('SL')) %>%
   mutate(week = rep(1:48, 5),
-         season = d_anls$season)
+         season = d_anls$season)  
+
+seasons <- unique(d_anls$season)
+mse_names <- c(y_mse = 'Observed', 
+             mse.lmf = 'Cyclical LS',
+             mse.lmpoly = 'Polynomial LS',
+             mse.lmnspl = 'Natural splines LS',
+             mse.steplm = 'Backwards AIC LS',
+             mse.lasso = 'LASSO',
+             mse.elasticnet = 'Elastic Net',
+             mse.ridge = 'Ridge Regression',
+             mse.rf_1 = 'Random Forest (Dflt)',
+             mse.rf_2 = 'Random Forest (1)',
+             mse.gam = 'GAM',
+             mse.SL = 'Ensemble Superlearner')
 ```
 
 Assessments from LOO-CV model:  
 
-## Peak week  
+### Peak week  
 
 ```{r }
-d_perform %>%
+d_pkwk <- d_perform %>%
   group_by(season) %>%
   summarize_at(vars(y_mse, starts_with('mse')), which.max) %>%
   pivot_longer(cols = c('y_mse', starts_with('mse')), names_to = 'Model', 
                values_to = c('Peak Week')) %>%
   pivot_wider(names_from = season, values_from = 'Peak Week') %>%
-  kable() %>%
-  kable_styling()
+  mutate(Model = factor(Model, levels = names(mse_names), labels = mse_names)) %>%
+  mutate_at(vars(seasons), 
+            .funs = list(~cell_spec(., 'html', color = if_else(.==first(.), 'blue', 'red')))) %>%
+  mutate_at(vars(seasons), list(~prettyNum(., big.mark =','))) 
+
+# mtcars[1:10, 1:2] %>%
+#   mutate(
+#     car = row.names(.),
+#     mpg = cell_spec(mpg, "html", color = ifelse(mpg > 20, "red", "blue")),
+#     cyl = cell_spec(cyl, "html", color = "white", align = "c", angle = 45, 
+#                     background = factor(cyl, c(4, 6, 8), 
+#                                         c("#666666", "#999999", "#BBBBBB")))
+#   ) %>%
+#   select(car, mpg, cyl) %>%
+#   kbl(format = "html", escape = F) %>%
+#   kable_paper("striped", full_width = F)
+
+
+d_pkwk %>%
+  kable(align=c('lcccc'), escape = F) %>%
+  kable_classic(full_width = F, html_font = "Cambria")
 ```
 
-## Peak week  
+## Peak cases  
+
+Percent difference between observed and predicted deaths at the height of season.  
 
 ```{r }
-d_perform %>%
+d_pkwk <- d_perform %>%
   group_by(season) %>%
   summarize_at(vars(y_mse, starts_with('mse')), max) %>%
+  group_by(season) %>%
+  summarize_at(vars(y_mse, starts_with('mse')), round) %>%
   pivot_longer(cols = c('y_mse', starts_with('mse')), names_to = 'Model', 
-               values_to = c('Peak cases')) %>%
-  pivot_wider(names_from = season, values_from = 'Peak cases') %>%
-  kable() %>%
-  kable_styling()
+               values_to = c('Peak Week')) %>%
+  pivot_wider(names_from = season, values_from = 'Peak Week') %>%
+  mutate(Model = factor(Model, levels = names(mse_names), labels = mse_names)) %>%
+  mutate_at(vars(seasons), list(~(sprintf("%.1f%%", (((.-.[1])/.[1])*100))))) %>%
+  slice(-1) %>%
+  mutate_at(vars(seasons), list(~prettyNum(., big.mark =','))) 
+
+d_pkwk %>%
+  kable(align=c('lcccc'), escape = F) %>%
+  kable_classic(full_width = F, html_font = "Cambria")
 ```
 
 ## Cumulative cases  
 
 ```{r }
-d_perform %>%
+d_pkwk <- d_perform %>%
   group_by(season) %>%
   summarize_at(vars(y_mse, starts_with('mse')), sum) %>%
+  group_by(season) %>%
+  summarize_at(vars(y_mse, starts_with('mse')), round) %>%
   pivot_longer(cols = c('y_mse', starts_with('mse')), names_to = 'Model', 
-               values_to = c('Peak cases')) %>%
-  pivot_wider(names_from = season, values_from = 'Peak cases') %>%
-  kable() %>%
-  kable_styling()
+               values_to = c('Peak Week')) %>%
+  pivot_wider(names_from = season, values_from = 'Peak Week') %>%
+  mutate(Model = factor(Model, levels = names(mse_names), labels = mse_names)) %>%
+  mutate_at(vars(seasons), list(~(sprintf("%.1f%%", (((.-.[1])/.[1])*100))))) %>%
+  slice(-1) %>%
+  mutate_at(vars(seasons), list(~prettyNum(., big.mark =','))) 
+
+d_pkwk %>%
+  kable(align=c('lcccc'), escape = F) %>%
+  kable_classic(full_width = F, html_font = "Cambria")
 ```
 
-## Mean squared error  
+## Cross-Validated Mean Squared Error  
 
 ```{r }
 df_mse %>%
-  arrange(mse) %>%
-  mutate(mse = log(mse)) %>%
-  rename(`Log (MSE)` = mse) %>%
-  kable() %>%
-  kable_styling()
+  mutate(mse = log(mse),
+         Weight = c(round(df_sl, 2), '-')) %>%
+  rename(Model = learner) %>%
+  mutate(Model = factor(Model, levels = names(mse_names), labels = mse_names)) %>%
+  rename(`Log (MSE-CV)` = mse) %>%
+  arrange(`Log (MSE-CV)`) %>%
+  kable(align=c('lc'), escape = F) %>%
+  kable_classic(full_width = F, html_font = "Cambria")
 ```
 
-ensemble and Top 5 models plotted against data.  
+Top 3 models plotted against data.  
 
 # Figure 1. Predicted vs. Observed data  
 
 ```{r }
-top5 <- df_mse %>% arrange(mse) %>% slice(1:5) %>%
+top3 <- df_mse %>% arrange(mse) %>% slice(1:3) %>%
   pull(learner)
 
 d_gg <- d_perform %>%
-  select(season, week, y_mse, all_of(top5)) %>%
+  select(season, week, y_mse, all_of(top3)) %>%
   mutate(sweek = paste0(season, 'W', week),
          sweek_f = factor(sweek)) %>%
-  pivot_longer(cols = c('y_mse', all_of(top5)),
+  pivot_longer(cols = c('y_mse', all_of(top3)),
                names_to = 'Model', 
-               values_to = 'y') 
+               values_to = 'y') %>%
+  mutate(Model = factor(Model, levels = names(mse_names), labels = mse_names)) 
 ```
 
-```{r }
+```{r, fig.width=8, fig.height=6 }
 ggplot(d_gg, aes(x = sweek_f, y=y, group = Model, color=Model)) +
   geom_line() + 
-  theme_bw()
-
+  theme_classic() +
+  labs(x = 'Influenza Season by Week (2013 - 2018)',
+       y = 'Deaths') +
+  theme(axis.ticks.x=element_blank(),
+        axis.text.x=element_blank())
 ```
 
+# Estimating Influenza Attributable Mortaltity  
 
 # References  

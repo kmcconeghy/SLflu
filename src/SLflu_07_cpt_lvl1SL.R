@@ -30,15 +30,15 @@ d_preds <- bind_cols(d_preds_sl, d_preds_cv)
 saveRDS(d_preds, here::here('prj_dbdf', dta.names$f_cpt[2])) 
 
 # Level-1-Model  
-X <- d_preds %>%
-  select(starts_with('SL')) %>%
+X <- d_preds_cv %>%
+  select(starts_with('mse')) %>%
   as.matrix(.)
 
-Y <- d_preds %>% pull(y_sl)
+Y <- d_preds %>% pull(y_mse)
 
 #Non-negative least squares with no intercept
-nonnegls <- glmnet(X, Y, lambda = 0, lower.limits = 0, intercept = FALSE)
-alpha <- coef(nonnegls)[-1, 1] #-1 to remove intercept
+fit <- nnls::nnls(X, Y)
+alpha <- fit$x #-1 to remove intercept
 
 # normalize
 alpha <- alpha/sum(alpha)
@@ -55,8 +55,8 @@ mse_wtd <- d_preds %>%
   as.matrix(.)
 
 #add SuperLearner  
-d_preds$SL.SL <- mse_wtd %*% alpha
-d_preds$mse.SL <- sl_wtd %*% alpha  
+d_preds$SL.SL <- sl_wtd %*% alpha
+d_preds$mse.SL <- mse_wtd %*% alpha  
 
 saveRDS(d_preds, here::here('prj_dbdf', dta.names$f_cpt[4]))  
 
