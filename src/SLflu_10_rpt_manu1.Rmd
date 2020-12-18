@@ -22,7 +22,7 @@ always_allow_html: yes
 
 ```{r setup, include=FALSE}
 if (Sys.getenv("USERNAME")=='kevin') { 
-  source(paste0('C:\\Users\\kevin\\Documents\\PHP2602\\', params$src_cfg))  
+  source(paste0('C:\\Users\\kevin\\Documents\\SLflu\\', params$src_cfg))  
 }
 if (Sys.getenv("USERNAME")=='kmcconeg') { 
   source(paste0('C:\\Github\\SLflu\\', params$src_cfg))  
@@ -253,9 +253,10 @@ d_gg <- d_perform %>%
   mutate(Model = factor(Model, levels = names(mse_names), labels = mse_names)) 
 ```
 
-```{r, fig.width=8, fig.height=6 }
+```{r, fig.width=8, fig.height=6}
 ggplot(d_gg, aes(x = sweek_f, y=y, group = Model, color=Model)) +
-  geom_line() + 
+  geom_line(aes(linetype=Model)) + 
+  scale_colour_manual(values = c("black", "red", "darkred", "blue")) +
   theme_classic() +
   labs(x = 'Influenza Season by Week (2013 - 2018)',
        y = 'Deaths') +
@@ -263,6 +264,6 @@ ggplot(d_gg, aes(x = sweek_f, y=y, group = Model, color=Model)) +
         axis.text.x=element_blank())
 ```
 
-# Estimating Influenza Attributable Mortaltity  
+# Estimating Influenza Attributable Mortality  
 
 # References  
